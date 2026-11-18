@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Property Assistant</title>
+<meta name="description" content="Ask about DarGlobal projects and Wasalt listings — answers grounded in public data with source links.">
+<link rel="stylesheet" href="style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏙️</text></svg>">
+</head>
+<body>
+<header>
+  <div class="brand">
+    <div class="logo">🏙️</div>
+    <div>
+      <h1>Property Assistant</h1>
+      <p class="sub">Unofficial assistant · answers grounded in public data from
+        <b>DarGlobal</b> (developer) &amp; <b>Wasalt</b> (Saudi marketplace)</p>
+    </div>
+  </div>
+  <div class="controls">
+    <div class="seg" id="sourceSeg" role="radiogroup" aria-label="Source filter">
+      <button data-v="both" class="on">All</button><button data-v="darglobal">DarGlobal</button><button data-v="wasalt">Wasalt</button>
+    </div>
+    <button id="clearBtn" class="ghost" title="Clear conversation">Clear</button>
+  </div>
+</header>
+
+<main id="chat" aria-live="polite"></main>
+
+<div id="suggest" class="suggest"></div>
+
+<footer>
+  <form id="form" autocomplete="off">
+    <input id="input" placeholder="Ask about projects, listings, locations…" maxlength="2000" aria-label="Your question">
+    <button id="send" type="submit" aria-label="Send">➤</button>
+  </form>
+  <p class="note" id="modeNote"></p>
+</footer>
+
+<script src="chat.js"></script>
+</body>
+</html>
