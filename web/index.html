@@ -5,39 +5,54 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Property Assistant</title>
 <meta name="description" content="Ask about DarGlobal projects and Wasalt listings — answers grounded in public data with source links.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏙️</text></svg>">
 </head>
 <body>
-<header>
-  <div class="brand">
-    <div class="logo">🏙️</div>
-    <div>
-      <h1>Property Assistant</h1>
-      <p class="sub">Unofficial assistant · answers grounded in public data from
-        <b>DarGlobal</b> (developer) &amp; <b>Wasalt</b> (Saudi marketplace)</p>
+<div class="shell">
+
+  <header>
+    <div class="peer">
+      <div class="avatar lg">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 21V9l6-4v4l6-4v5h6v11z"/></svg>
+        <i class="dot" aria-hidden="true"></i>
+      </div>
+      <div class="peer-txt">
+        <h1>Property Assistant</h1>
+        <p class="status" id="statusLine">Connecting…</p>
+      </div>
     </div>
-  </div>
-  <div class="controls">
-    <div class="seg" id="sourceSeg" role="radiogroup" aria-label="Source filter">
-      <button data-v="both" class="on">All</button><button data-v="darglobal">DarGlobal</button><button data-v="wasalt">Wasalt</button>
+
+    <div class="tools">
+      <div class="seg" id="sourceSeg" role="radiogroup" aria-label="Filter sources">
+        <button data-v="both" class="on" role="radio" aria-checked="true">All</button><button data-v="darglobal" role="radio" aria-checked="false">DarGlobal</button><button data-v="wasalt" role="radio" aria-checked="false">Wasalt</button>
+      </div>
+      <button id="clearBtn" class="icon-btn" title="Clear conversation" aria-label="Clear conversation">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 7h12v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1zm3-3h6l1 2H8z"/></svg>
+      </button>
     </div>
-    <button id="clearBtn" class="ghost" title="Clear conversation">Clear</button>
-  </div>
-</header>
+  </header>
 
-<main id="chat" aria-live="polite"></main>
+  <main id="chat" aria-live="polite" aria-label="Conversation"></main>
 
-<div id="suggest" class="suggest"></div>
+  <div id="suggest" class="suggest" aria-label="Suggested questions"></div>
 
-<footer>
-  <form id="form" autocomplete="off">
-    <input id="input" placeholder="Ask about projects, listings, locations…" maxlength="2000" aria-label="Your question">
-    <button id="send" type="submit" aria-label="Send">➤</button>
-  </form>
-  <p class="note" id="modeNote"></p>
-</footer>
+  <footer>
+    <form id="form" autocomplete="off">
+      <div class="field">
+        <input id="input" placeholder="Say something…" maxlength="2000" aria-label="Your question">
+      </div>
+      <button id="send" type="submit" class="send" aria-label="Send message">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.4 20.4 21 12 3.4 3.6 3.4 10l12.6 2-12.6 2z"/></svg>
+      </button>
+    </form>
+    <p class="note" id="modeNote"></p>
+  </footer>
 
+</div>
 <script src="chat.js"></script>
 </body>
 </html>
