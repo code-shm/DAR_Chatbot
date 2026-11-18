@@ -4,8 +4,31 @@ const input = document.getElementById("input");
 const send = document.getElementById("send");
 const suggestBox = document.getElementById("suggest");
 const modeNote = document.getElementById("modeNote");
-const statusLine = document.getElementById("statusLine");
 const seg = document.getElementById("sourceSeg");
+const railDot = document.getElementById("railDot");
+
+const BOT_NAME = "Maria";
+
+/* ---- theme: explicit choice wins, otherwise follow the system ----
+   localStorage can throw (private mode, blocked site data), and the page
+   must render correctly without it, so every access is guarded. */
+const store = {
+  get(k) { try { return localStorage.getItem(k); } catch { return null; } },
+  set(k, v) { try { localStorage.setItem(k, v); } catch { /* ignore */ } },
+};
+function applyTheme(mode) {
+  if (mode) document.documentElement.setAttribute("data-theme", mode);
+  else document.documentElement.removeAttribute("data-theme");
+}
+function toggleTheme() {
+  const systemDark = matchMedia("(prefers-color-scheme: dark)").matches;
+  const current = document.documentElement.getAttribute("data-theme")
+    || (systemDark ? "dark" : "light");
+  const next = current === "dark" ? "light" : "dark";
+  applyTheme(next);
+  store.set("theme", next);
+}
+applyTheme(store.get("theme"));
 
 const BOT_ICON = '<svg viewBox="0 0 24 24"><path d="M3 21V9l6-4v4l6-4v5h6v11z"/></svg>';
 const YOU_ICON = '<svg viewBox="0 0 24 24"><path d="M12 12a5 5 0 1 0-5-5 5 5 0 0 0 5 5m0 2c-4 0-9 2-9 5v3h18v-3c0-3-5-5-9-5"/></svg>';
@@ -45,6 +68,7 @@ function md(src) {
     .replace(/^###\s*(.+)$/gm, "<b>$1</b>")
     .replace(/^\s*[-*]\s+/gm, "• ")
     .replace(/\*\*(.+?)\*\*/g, "<b>$1</b>")
+    .replace(/\*([^*\n]+)\*/g, "<i>$1</i>")   // after bold, so ** is unaffected
     .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,
       '<a href="$2" target="_blank" rel="noopener">$1</a>')
     .replace(/\[(\d+)\]/g, '<span class="cite">[$1]</span>')
@@ -60,7 +84,7 @@ function addMsg(role, bodyHtml, { error = false } = {}) {
   wrap.innerHTML =
     `<div class="meta">
        <span class="avatar sm">${isBot ? BOT_ICON : YOU_ICON}</span>
-       <span class="who">${isBot ? "Property Assistant" : "You"}</span>
+       <span class="who">${isBot ? BOT_NAME : "You"}</span>
        <span class="time">${now()}</span>
      </div>
      <div class="bubble${error ? " err" : ""}">${bodyHtml}</div>`;
@@ -131,19 +155,28 @@ seg.addEventListener("click", (e) => {
   source = b.dataset.v;
 });
 
-document.getElementById("clearBtn").addEventListener("click", () => {
+function newConversation() {
   history = [];
   chat.innerHTML = "";
   greet();
   suggestBox.style.display = "flex";
+  input.focus();
+}
+
+document.querySelector(".rail nav").addEventListener("click", (e) => {
+  const b = e.target.closest(".rail-item");
+  if (!b) return;
+  if (b.dataset.act === "new") newConversation();
+  else if (b.dataset.act === "theme") toggleTheme();
 });
 
 function greet() {
   addMsg("bot",
-    "<p>Welcome. I answer questions about <b>DarGlobal</b> luxury developments " +
-    "and <b>Wasalt</b> property listings in Saudi Arabia, using public data — " +
-    "every answer links the sources it came from.</p>" +
-    "<p>What would you like to know?</p>");
+    `<p>Hello, I'm <b>${BOT_NAME}</b>. I can tell you about ` +
+    "<b>DarGlobal</b> luxury developments and <b>Wasalt</b> property listings " +
+    "across Saudi Arabia.</p>" +
+    "<p>Everything I say comes from public sources, and I link each one so you " +
+    "can check it yourself. What would you like to know?</p>");
 }
 
 async function init() {
@@ -161,14 +194,15 @@ async function init() {
     }
     const n = h.corpus?.total_docs ?? "?";
     const live = h.llm_mode !== "mock";
-    statusLine.textContent = live
-      ? `Online · ${n} documents indexed`
-      : `Demo mode · ${n} documents indexed`;
+    railDot.textContent = live ? "●" : "○";
+    railDot.title = live ? `Online — ${n} documents indexed`
+                         : "Demo mode — no LLM key configured";
     modeNote.textContent =
       `${live ? h.model : "no API key — showing source excerpts"} · ` +
       "Information may be outdated — always verify on the linked source page.";
   } catch {
-    statusLine.textContent = "Backend unreachable";
+    railDot.textContent = "○";
+    railDot.title = "Backend unreachable";
     modeNote.textContent = "Could not reach the server.";
   }
   input.focus();

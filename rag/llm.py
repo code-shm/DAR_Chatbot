@@ -41,6 +41,11 @@ PREFERRED_FREE = [
 ]
 
 
+# OpenRouter reports an account-wide daily cap as "free-models-per-day";
+# per-model throttling reads "temporarily rate-limited upstream".
+DAILY_CAP_RE = re.compile(r"per-day|daily limit|free-models-per-day", re.I)
+
+
 class LLMError(RuntimeError):
     pass
 
@@ -75,7 +80,7 @@ class OpenRouterLLM:
         models = [self.model] + [m for m in self._available_free_models()
                                  if m != self.model]
         last_err = "no model attempted"
-        for model in models[:4]:
+        for model in models[:6]:   # widen the net; the free pool throttles often
             for attempt in range(3):
                 try:
                     r = requests.post(
@@ -102,8 +107,18 @@ class OpenRouterLLM:
                     last_err = (f"{model} returned empty content "
                                 f"(finish_reason={choice.get('finish_reason')})")
                     break  # a different model will do better than a retry
-                if r.status_code == 429:  # rate limit: backoff then retry
-                    time.sleep(3 * (attempt + 1))
+                if r.status_code == 429:
+                    body = r.text[:400]
+                    # An account-level daily cap ("free-models-per-day")
+                    # applies to EVERY free model, so retrying others just
+                    # stalls the request for minutes. Give up at once and let
+                    # the caller degrade to cited excerpts.
+                    if DAILY_CAP_RE.search(body):
+                        raise LLMError(
+                            "OpenRouter free-tier daily quota exhausted for "
+                            "this key — all free models are blocked until it "
+                            f"resets. ({body[:120]})")
+                    time.sleep(2 * (attempt + 1))   # per-model throttle
                     last_err = f"429 from {model}"
                     continue
                 if r.status_code in (402, 403):
@@ -127,6 +142,13 @@ class MockLLM:
 
     BANNER = ("**[demo mode — no LLM key configured]** Showing the most "
               "relevant source excerpts instead of a generated answer:\n\n")
+    BUSY_BANNER = ("**[I can't write a full answer right now — the free "
+                   "models are rate-limited.]** Here are the most relevant "
+                   "excerpts I found, so you're not left empty-handed. Try "
+                   "again shortly for a written answer:\n\n")
+
+    def __init__(self, banner: str | None = None):
+        self.banner = banner or self.BANNER
 
     def answer(self, question: str, context_blocks: list[dict]) -> str:
         q_terms = {w for w in re.findall(r"\w+", question.lower()) if len(w) > 3}
@@ -137,9 +159,9 @@ class MockLLM:
             excerpt = " ".join(sents[:2])[:400]
             picked.append(f"- {excerpt} [{b['n']}]")
         if not picked:
-            return (self.BANNER +
+            return (self.banner +
                     "No relevant information found in the knowledge base for this question.")
-        return self.BANNER + "\n".join(picked)
+        return self.banner + "\n".join(picked)
 
 
 def llm_mode() -> str:

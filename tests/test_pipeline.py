@@ -38,8 +38,9 @@ def test_off_topic_is_refused_without_calling_llm(bot_factory):
     bot = bot_factory(dense=0.10)
     r = bot.answer("Who won the cricket world cup?")
     assert r["off_topic"] is True
-    assert r["sources"] == []
-    assert "don't have information" in r["answer"]
+    assert r["sources"] == [], "a refusal must not cite sources"
+    # assert the refusal redirects to what Maria does cover, not exact wording
+    assert "DarGlobal" in r["answer"] and "Wasalt" in r["answer"]
 
 
 def test_borderline_below_floor_refused(bot_factory):
@@ -61,18 +62,20 @@ def test_mock_mode_is_labeled(bot_factory):
     assert "demo mode" in r["answer"]
 
 
-def test_llm_failure_degrades_gracefully(bot_factory, monkeypatch):
+def test_llm_failure_degrades_to_cited_excerpts(bot_factory):
+    """When every free model is rate-limited, serve excerpts, not an error."""
     bot = bot_factory(dense=0.70, mode="openrouter")
 
     class Boom:
         def chat(self, *a, **k):
-            raise pl.LLMError("simulated outage")
+            raise pl.LLMError("429 from every model")
 
     bot._llm = Boom()
     r = bot.answer("Tell me about Marea")
-    assert r["mode"] == "error"
-    assert "unavailable" in r["answer"]
-    assert r["sources"], "sources should still be offered when the LLM fails"
+    assert r["mode"] == "degraded"
+    assert "rate-limited" in r["answer"], "the degradation must be stated plainly"
+    assert "Marea" in r["answer"], "excerpts should come from the retrieved sources"
+    assert r["sources"], "sources must still be offered when the LLM fails"
 
 
 def test_history_is_used_for_followups(bot_factory):

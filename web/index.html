@@ -3,56 +3,77 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Property Assistant</title>
+<title>PropertyBot</title>
 <meta name="description" content="Ask about DarGlobal projects and Wasalt listings — answers grounded in public data with source links.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@600;700;800&display=swap" rel="stylesheet">
+<meta name="theme-color" content="#f4efe5" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#1e1815" media="(prefers-color-scheme: dark)">
 <link rel="stylesheet" href="style.css">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏙️</text></svg>">
 </head>
 <body>
-<div class="shell">
 
-  <header>
-    <div class="peer">
-      <div class="avatar lg">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 21V9l6-4v4l6-4v5h6v11z"/></svg>
-        <i class="dot" aria-hidden="true"></i>
+<aside class="rail">
+  <div class="mark" aria-hidden="true">
+    <svg viewBox="0 0 24 24"><path d="M3 21V9l6-4v4l6-4v5h6v11z"/></svg>
+  </div>
+
+  <nav aria-label="Primary">
+    <button class="rail-item on" data-act="chat" aria-current="page">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 2H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4l4 4 4-4h4a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2"/></svg>
+      <span>Chat</span>
+    </button>
+    <button class="rail-item" data-act="new" title="Start a new conversation">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5h2v6h6v2h-6v6h-2v-6H5v-2h6z"/></svg>
+      <span>New</span>
+    </button>
+    <button class="rail-item" data-act="theme" title="Switch light / dark">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 18a6 6 0 1 1 0-12zm0 4a10 10 0 1 0 0-20 10 10 0 0 0 0 20"/></svg>
+      <span>Theme</span>
+    </button>
+  </nav>
+
+  <div class="rail-foot">
+    <span class="initial" id="railDot" title="Knowledge base status">·</span>
+  </div>
+</aside>
+
+<div class="page">
+  <h1 class="wordmark">PropertyBot</h1>
+
+  <div class="shell">
+    <header>
+      <div class="titles">
+        <h2>Maria</h2>
       </div>
-      <div class="peer-txt">
-        <h1>Property Assistant</h1>
-        <p class="status" id="statusLine">Connecting…</p>
+      <div class="tools">
+        <div class="seg" id="sourceSeg" role="radiogroup" aria-label="Filter sources">
+          <button data-v="both" class="on" role="radio" aria-checked="true">All</button><button data-v="darglobal" role="radio" aria-checked="false">DarGlobal</button><button data-v="wasalt" role="radio" aria-checked="false">Wasalt</button>
+        </div>
       </div>
-    </div>
+    </header>
 
-    <div class="tools">
-      <div class="seg" id="sourceSeg" role="radiogroup" aria-label="Filter sources">
-        <button data-v="both" class="on" role="radio" aria-checked="true">All</button><button data-v="darglobal" role="radio" aria-checked="false">DarGlobal</button><button data-v="wasalt" role="radio" aria-checked="false">Wasalt</button>
-      </div>
-      <button id="clearBtn" class="icon-btn" title="Clear conversation" aria-label="Clear conversation">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 7h12v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1zm3-3h6l1 2H8z"/></svg>
-      </button>
-    </div>
-  </header>
+    <main id="chat" aria-live="polite" aria-label="Conversation"></main>
 
-  <main id="chat" aria-live="polite" aria-label="Conversation"></main>
+    <div id="suggest" class="suggest" aria-label="Suggested questions"></div>
 
-  <div id="suggest" class="suggest" aria-label="Suggested questions"></div>
-
-  <footer>
-    <form id="form" autocomplete="off">
-      <div class="field">
-        <input id="input" placeholder="Say something…" maxlength="2000" aria-label="Your question">
-      </div>
-      <button id="send" type="submit" class="send" aria-label="Send message">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.4 20.4 21 12 3.4 3.6 3.4 10l12.6 2-12.6 2z"/></svg>
-      </button>
-    </form>
-    <p class="note" id="modeNote"></p>
-  </footer>
-
+    <footer>
+      <form id="form" autocomplete="off">
+        <div class="field">
+          <input id="input" placeholder="Ask about a project, city or listing…" maxlength="2000" aria-label="Your question">
+        </div>
+        <button id="send" type="submit" class="send">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.4 20.4 21 12 3.4 3.6 3.4 10l12.6 2-12.6 2z"/></svg>
+          <span>Send</span>
+        </button>
+      </form>
+      <p class="note" id="modeNote"></p>
+    </footer>
+  </div>
 </div>
+
 <script src="chat.js"></script>
 </body>
 </html>

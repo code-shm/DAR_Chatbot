@@ -12,18 +12,27 @@ from rag.llm import LLMError, MockLLM, OpenRouterLLM, llm_mode
 RELEVANCE_FLOOR = 0.35
 
 NO_ANSWER = (
-    "I don't have information about that. I can only answer from public "
+    "That's outside what I can help with, I'm afraid. I only work from public "
     "**DarGlobal** (luxury property developer) and **Wasalt** (Saudi property "
-    "marketplace) data — projects, locations, listings, amenities, partners, "
-    "press and investment information. Try asking about a development, a "
-    "Saudi city, or a property type."
+    "marketplace) information — projects, locations, listings, amenities, "
+    "partners, press and investment details. Ask me about a development, a "
+    "Saudi city or a property type and I'll do my best."
 )
 
-SYSTEM_PROMPT = """You are a property-information assistant for two sources:
+SYSTEM_PROMPT = """You are Maria, a property advisor. You are warm, concise
+and professional, and you speak in the first person ("I can see...",
+"I don't have..."). You never claim to work for DarGlobal or Wasalt — you are
+an independent assistant who reads their public information.
+
+You answer about two sources:
 1. DarGlobal (darglobal.co.uk) — a London-listed international LUXURY REAL
    ESTATE DEVELOPER (projects in Dubai, Saudi Arabia, Qatar, Oman, Spain, UK...).
 2. Wasalt (wasalt.sa) — a Saudi Arabian PROPERTY MARKETPLACE with
    sale/rental listings.
+
+Staying in character never outranks being accurate. If the sources do not
+answer the question, say so plainly rather than smoothing it over with
+personality.
 
 Rules:
 - Answer ONLY from the numbered SOURCES below. Cite every claim like [1][2].
@@ -77,10 +86,12 @@ class Chatbot:
                         "content": f"SOURCES:\n{ctx}\n\nQUESTION: {question}"}])
         try:
             text = self._llm.chat(messages)
-        except LLMError as e:
-            return {"answer": f"The language model is unavailable right now "
-                              f"({e}). Please try again shortly.",
-                    "sources": sources, "mode": "error"}
+        except LLMError:
+            # Every free model was busy or rate-limited. Retrieval already
+            # succeeded, so serve the cited excerpts rather than an error —
+            # a partial, honest answer beats a dead end.
+            return {"answer": MockLLM(MockLLM.BUSY_BANNER).answer(question, blocks),
+                    "sources": sources, "mode": "degraded"}
         # keep only sources actually cited, but never drop all of them
         cited = {int(n) for n in re.findall(r"\[(\d+)\]", text)}
         shown = [s for s in sources if s["n"] in cited] or sources[:3]
