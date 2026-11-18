@@ -106,8 +106,21 @@ header{
   display:flex; align-items:center; justify-content:space-between; gap:14px;
   padding:16px 22px; border-bottom:1px solid var(--card-line); flex-wrap:wrap;
 }
-.titles{min-width:0}
+.titles{min-width:0; display:flex; align-items:center; gap:11px}
 h2{margin:0; font-size:17px; font-weight:700; letter-spacing:-.1px}
+
+/* character avatars — tinted per persona so Maria and Ben read apart
+   instantly, in both themes */
+.avatar.maria{background:#ecd9d4; color:#6d5048}
+.avatar.ben{background:#dae0d6; color:#4b574b}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]) .avatar.maria{background:#45332f; color:#e4c3ba}
+  :root:not([data-theme="light"]) .avatar.ben{background:#2f3a31; color:#bed1be}
+}
+:root[data-theme="dark"] .avatar.maria{background:#45332f; color:#e4c3ba}
+:root[data-theme="dark"] .avatar.ben{background:#2f3a31; color:#bed1be}
+.avatar.lg{width:40px; height:40px; font-size:25px; flex:none;
+  display:grid; place-items:center; border-radius:50%}
 
 /* persona picker — a native select so it works everywhere */
 .persona-pick{position:relative; display:inline-flex; align-items:center}
@@ -254,6 +267,17 @@ footer{padding:12px 22px 16px; border-top:1px solid var(--card-line)}
   font:15px Inter,sans-serif; padding:14px 0;
 }
 #input::placeholder{color:var(--muted)}
+.mic{
+  flex:none; width:34px; height:34px; margin-right:-6px;
+  display:grid; place-items:center; font-size:16px;
+  border:0; border-radius:50%; background:transparent; color:var(--muted);
+  cursor:pointer; transition:background .18s, color .18s;
+}
+.mic:hover{background:var(--chip); color:var(--ink)}
+.mic[aria-pressed="true"]{background:var(--accent); color:var(--accent-ink)}
+.mic[aria-pressed="true"] svg{animation:mic 1.1s ease-in-out infinite}
+@keyframes mic{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(.84);opacity:.6}}
+.field.listening{border-color:var(--accent); box-shadow:0 0 0 4px var(--ring)}
 .send{
   flex:none; display:inline-flex; align-items:center; gap:8px;
   padding:0 22px; height:48px; border:0; border-radius:12px;

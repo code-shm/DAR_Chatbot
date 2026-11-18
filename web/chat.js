@@ -95,6 +95,91 @@ if (speech.supported) {
   voiceBtn.title = "This browser has no speech synthesis";
 }
 
+/* ---------------- dictation (Web Speech Recognition) ----------------
+   Chrome/Edge/Safari only — Firefox has no implementation, so the mic is
+   hidden there rather than offering a button that cannot work. Needs HTTPS
+   (Render serves it) or localhost, plus microphone permission. */
+const micBtn = document.getElementById("micBtn");
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+const dictation = {
+  supported: Boolean(SR),
+  rec: null,
+  listening: false,
+  final: "",
+
+  start() {
+    if (!this.supported || this.listening) return;
+    speech.stop();                       // don't let the mic hear the answer
+    const rec = this.rec = new SR();
+    rec.lang = "en-US";
+    rec.interimResults = true;
+    rec.continuous = false;
+    this.final = "";
+
+    rec.onstart = () => {
+      this.listening = true;
+      micBtn.setAttribute("aria-pressed", "true");
+      input.closest(".field").classList.add("listening");
+      input.placeholder = "Listening…";
+    };
+    rec.onresult = (e) => {
+      let interim = "";
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        const t = e.results[i][0].transcript;
+        if (e.results[i].isFinal) this.final += t;
+        else interim += t;
+      }
+      input.value = (this.final + interim).trim();
+    };
+    rec.onerror = (e) => {
+      const why = {
+        "not-allowed": "Microphone access was blocked — allow it in your browser's site settings.",
+        "service-not-allowed": "Microphone access was blocked for this site.",
+        "no-speech": "I didn't catch anything — try again.",
+        "audio-capture": "No microphone was found.",
+        "network": "Speech recognition needs a network connection.",
+      }[e.error];
+      if (why) addMsg("bot", esc(why), { error: true });
+      this.reset();
+    };
+    rec.onend = () => {
+      const cancelled = this.cancelled;
+      const said = (this.final || input.value).trim();
+      this.reset();
+      if (cancelled) { input.value = ""; return; }   // tapping the mic again cancels
+      if (said) { input.value = said; ask(said); }   // complete the voice loop
+    };
+
+    this.cancelled = false;
+    try { rec.start(); } catch { this.reset(); }
+  },
+
+  /** Tapping the mic while listening cancels — abort() skips onresult. */
+  stop() {
+    if (this.rec && this.listening) {
+      this.cancelled = true;
+      this.rec.abort();
+    }
+  },
+
+  reset() {
+    this.listening = false;
+    this.cancelled = false;
+    this.rec = null;
+    micBtn.setAttribute("aria-pressed", "false");
+    input.closest(".field").classList.remove("listening");
+    input.placeholder = "Ask about a project, city or listing…";
+  },
+};
+
+if (dictation.supported) {
+  micBtn.addEventListener("click", () =>
+    dictation.listening ? dictation.stop() : dictation.start());
+} else {
+  micBtn.remove();
+}
+
 /* ---- theme: explicit choice wins, otherwise follow the system ----
    localStorage can throw (private mode, blocked site data), and the page
    must render correctly without it, so every access is guarded. */
@@ -116,8 +201,22 @@ function toggleTheme() {
 }
 applyTheme(store.get("theme"));
 
-const BOT_ICON = '<svg viewBox="0 0 24 24"><path d="M3 21V9l6-4v4l6-4v5h6v11z"/></svg>';
 const YOU_ICON = '<svg viewBox="0 0 24 24"><path d="M12 12a5 5 0 1 0-5-5 5 5 0 0 0 5 5m0 2c-4 0-9 2-9 5v3h18v-3c0-3-5-5-9-5"/></svg>';
+
+/* Illustrated characters, not photographs — a generated portrait passed off
+   as a real person would be misleading. Long hair vs. cropped hair keeps the
+   two readable even at 26px. */
+const AVATARS = {
+  maria: '<svg viewBox="0 0 24 24" aria-hidden="true">' +
+    '<path d="M12 2.6c-3.5 0-6.2 2.7-6.2 6.3v6.6c0 .7.8 1 1.2.4l1-1.2V9.9c3.3 1.3 6.7 1.3 10 0v4.8l1 1.2c.4.6 1.2.3 1.2-.4V8.9c0-3.6-2.7-6.3-6.2-6.3z"/>' +
+    '<circle cx="12" cy="10.4" r="3.7"/>' +
+    '<path d="M12 14.9c-3.5 0-6.3 2.1-6.3 5V21h12.6v-1.1c0-2.9-2.8-5-6.3-5z"/></svg>',
+  ben: '<svg viewBox="0 0 24 24" aria-hidden="true">' +
+    '<path d="M12 2.8c-3.1 0-5.6 2.1-5.6 4.8 0 .8.2 1.5.6 2.1.3-2.2 1.6-3.1 2.4-2.6 1.9 1 4.3 1 6.2 0 .8-.5 1.7.4 2 2.6.4-.6.6-1.3.6-2.1 0-2.7-2.5-4.8-5.6-4.8z"/>' +
+    '<circle cx="12" cy="11" r="3.9"/>' +
+    '<path d="M12 15.6c-3.7 0-6.6 2.2-6.6 5.1V21h13.2v-.3c0-2.9-2.9-5.1-6.6-5.1z"/></svg>',
+};
+window.__AV = AVATARS;   // exposed so UI checks can render the real markup
 
 let history = [];
 let source = "both";
@@ -169,7 +268,8 @@ function addMsg(role, bodyHtml, { error = false } = {}) {
   const isBot = role === "bot";
   wrap.innerHTML =
     `<div class="meta">
-       <span class="avatar sm">${isBot ? BOT_ICON : YOU_ICON}</span>
+       <span class="avatar sm${isBot ? " " + persona : ""}">${
+         isBot ? AVATARS[persona] : YOU_ICON}</span>
        <span class="who">${isBot ? botName() : "You"}</span>
        ${isBot && speech.supported
          ? `<button class="speak" title="Read this aloud" aria-label="Read aloud">
@@ -263,10 +363,17 @@ function newConversation() {
   input.focus();
 }
 
+function paintPersona() {
+  const av = document.getElementById("personaAvatar");
+  av.className = `avatar lg ${persona}`;
+  av.innerHTML = AVATARS[persona];
+}
+
 personaSel.addEventListener("change", () => {
   speech.stop();
   persona = personaSel.value;
   store.set("persona", persona);
+  paintPersona();
   // switching who you're talking to starts a fresh conversation: the history
   // is written in the previous character's voice.
   history = [];
@@ -315,6 +422,7 @@ async function init() {
     speech.auto = true;
     voiceBtn.setAttribute("aria-pressed", "true");
   }
+  paintPersona();
   greet();
   try {
     const [s, h] = await Promise.all([
@@ -330,10 +438,9 @@ async function init() {
     const n = h.corpus?.total_docs ?? "?";
     const live = h.llm_mode !== "mock";
     railDot.textContent = live ? "●" : "○";
-    railDot.title = live ? `Online — ${n} documents indexed`
+    railDot.title = live ? `Online — ${n} documents indexed · ${h.model}`
                          : "Demo mode — no LLM key configured";
     modeNote.textContent =
-      `${live ? h.model : "no API key — showing source excerpts"} · ` +
       "Information may be outdated — always verify on the linked source page.";
   } catch {
     railDot.textContent = "○";

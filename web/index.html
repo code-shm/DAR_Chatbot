@@ -46,6 +46,7 @@
   <div class="shell">
     <header>
       <div class="titles">
+        <span class="avatar lg maria" id="personaAvatar" aria-hidden="true"></span>
         <label class="persona-pick">
           <select id="persona" aria-label="Choose who you're talking to">
             <option value="maria" selected>Maria</option>
@@ -74,6 +75,10 @@
       <form id="form" autocomplete="off">
         <div class="field">
           <input id="input" placeholder="Ask about a project, city or listing…" maxlength="2000" aria-label="Your question">
+          <button type="button" id="micBtn" class="mic" aria-pressed="false"
+                  title="Speak your question" aria-label="Speak your question">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3m5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.9V21h2v-3.1A7 7 0 0 0 19 11z"/></svg>
+          </button>
         </div>
         <button id="send" type="submit" class="send">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.4 20.4 21 12 3.4 3.6 3.4 10l12.6 2-12.6 2z"/></svg>
