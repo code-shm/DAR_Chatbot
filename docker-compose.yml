@@ -1,0 +1,16 @@
+services:
+  app:
+    build: .
+    ports:
+      - "8000:7860"
+    env_file:
+      - .env
+    volumes:
+      - ./data:/app/data   # knowledge base persists across restarts
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c",
+             "import urllib.request as u; u.urlopen('http://127.0.0.1:7860/api/health')"]
+      interval: 30s
+      timeout: 10s
+      start_period: 40s

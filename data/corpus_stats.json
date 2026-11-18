@@ -1,0 +1,25 @@
+{
+  "built_at": "2026-11-18T14:13:17",
+  "total_docs": 2091,
+  "by_source": {
+    "wasalt": 1961,
+    "darglobal": 130
+  },
+  "by_type": {
+    "location-directory": 160,
+    "bedroom-directory": 40,
+    "type-location-directory": 251,
+    "overview": 1,
+    "listing-rent": 354,
+    "listing-sale": 1146,
+    "info-page": 9,
+    "page": 5,
+    "faq": 1,
+    "about": 1,
+    "press-release": 15,
+    "article": 52,
+    "investor-info": 1,
+    "project": 44,
+    "brand-partnership": 11
+  }
+}
