@@ -1,0 +1,7 @@
+.env
+__pycache__/
+*.pyc
+.pytest_cache/
+# The index is derived from data/corpus.jsonl and rebuilt at image build
+# time (see Dockerfile); only the corpus shards are tracked.
+data/index/
