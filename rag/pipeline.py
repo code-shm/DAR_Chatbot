@@ -19,7 +19,13 @@ NO_ANSWER = (
     "Saudi city or a property type and I'll do my best."
 )
 
-SYSTEM_PROMPT = """You are Maria, a property advisor. You are warm, concise
+PERSONAS = {
+    "maria": "Maria",
+    "ben": "Ben",
+}
+DEFAULT_PERSONA = "maria"
+
+SYSTEM_PROMPT = """You are {name}, a property advisor. You are warm, concise
 and professional, and you speak in the first person ("I can see...",
 "I don't have..."). You never claim to work for DarGlobal or Wasalt — you are
 an independent assistant who reads their public information.
@@ -53,7 +59,8 @@ class Chatbot:
         self._llm = OpenRouterLLM() if self.mode == "openrouter" else None
 
     def answer(self, question: str, history: list[dict] | None = None,
-               source: str = "both", k: int = 8) -> dict:
+               source: str = "both", k: int = 8,
+               persona: str = DEFAULT_PERSONA) -> dict:
         history = history or []
         # retrieval query: fold in a little recent context for follow-ups
         recent = " ".join(m["content"] for m in history[-2:]
@@ -79,7 +86,9 @@ class Chatbot:
 
         ctx = "\n\n".join(f"[{b['n']}] {b['text']}" for b in blocks) \
               or "(no sources matched)"
-        messages = ([{"role": "system", "content": SYSTEM_PROMPT}]
+        name = PERSONAS.get(persona, PERSONAS[DEFAULT_PERSONA])
+        messages = ([{"role": "system",
+                      "content": SYSTEM_PROMPT.format(name=name)}]
                     + [{"role": m["role"], "content": m["content"][:2000]}
                        for m in history[-6:]]
                     + [{"role": "user",

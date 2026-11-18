@@ -4,7 +4,10 @@ import server.main as srv
 
 
 class StubBot:
-    def answer(self, message, history, source="both"):
+    last = {}
+
+    def answer(self, message, history, source="both", persona="maria"):
+        StubBot.last = {"message": message, "source": source, "persona": persona}
         return {"answer": f"stub answer to: {message} [1]",
                 "sources": [{"n": 1, "title": "T", "url": "https://x", "source": source
                              if source != "both" else "darglobal", "type": "page"}],
@@ -38,6 +41,20 @@ def test_chat_validation(monkeypatch):
     c = client(monkeypatch)
     assert c.post("/api/chat", json={"message": ""}).status_code == 422
     assert c.post("/api/chat", json={"message": "x", "source": "evil"}).status_code == 422
+    assert c.post("/api/chat",
+                  json={"message": "x", "persona": "mallory"}).status_code == 422
+
+
+def test_persona_reaches_the_bot(monkeypatch):
+    c = client(monkeypatch)
+    c.post("/api/chat", json={"message": "hi", "persona": "ben"})
+    assert StubBot.last["persona"] == "ben"
+
+
+def test_persona_defaults_to_maria(monkeypatch):
+    c = client(monkeypatch)
+    c.post("/api/chat", json={"message": "hi"})
+    assert StubBot.last["persona"] == "maria"
 
 
 def test_refresh_requires_token(monkeypatch):

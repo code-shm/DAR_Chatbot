@@ -78,6 +78,35 @@ def test_llm_failure_degrades_to_cited_excerpts(bot_factory):
     assert r["sources"], "sources must still be offered when the LLM fails"
 
 
+@pytest.mark.parametrize("persona,name", [("maria", "Maria"), ("ben", "Ben")])
+def test_persona_name_reaches_the_system_prompt(bot_factory, persona, name):
+    bot = bot_factory(dense=0.70, mode="openrouter")
+    seen = {}
+
+    class Spy:
+        def chat(self, messages, **k):
+            seen["system"] = messages[0]["content"]
+            return "ok [1]"
+
+    bot._llm = Spy()
+    bot.answer("Tell me about Marea", persona=persona)
+    assert f"You are {name}," in seen["system"]
+
+
+def test_unknown_persona_falls_back_to_default(bot_factory):
+    bot = bot_factory(dense=0.70, mode="openrouter")
+    seen = {}
+
+    class Spy:
+        def chat(self, messages, **k):
+            seen["system"] = messages[0]["content"]
+            return "ok [1]"
+
+    bot._llm = Spy()
+    bot.answer("Tell me about Marea", persona="nobody")
+    assert "You are Maria," in seen["system"]
+
+
 def test_history_is_used_for_followups(bot_factory):
     """Follow-up questions fold recent user turns into the retrieval query."""
     bot = bot_factory(dense=0.70)

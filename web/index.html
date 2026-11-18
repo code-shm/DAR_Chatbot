@@ -46,9 +46,20 @@
   <div class="shell">
     <header>
       <div class="titles">
-        <h2>Maria</h2>
+        <label class="persona-pick">
+          <select id="persona" aria-label="Choose who you're talking to">
+            <option value="maria" selected>Maria</option>
+            <option value="ben">Ben</option>
+          </select>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10l5 5 5-5z"/></svg>
+        </label>
       </div>
       <div class="tools">
+        <button id="voiceBtn" class="toggle" aria-pressed="false"
+                title="Read answers aloud">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9v6h4l5 5V4L7 9zm13.5 3a4.5 4.5 0 0 0-2.5-4v8a4.5 4.5 0 0 0 2.5-4M14 1.2v2.1a8.5 8.5 0 0 1 0 17.4v2.1A10.6 10.6 0 0 0 14 1.2"/></svg>
+          <span>Voice</span>
+        </button>
         <div class="seg" id="sourceSeg" role="radiogroup" aria-label="Filter sources">
           <button data-v="both" class="on" role="radio" aria-checked="true">All</button><button data-v="darglobal" role="radio" aria-checked="false">DarGlobal</button><button data-v="wasalt" role="radio" aria-checked="false">Wasalt</button>
         </div>

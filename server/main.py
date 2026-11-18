@@ -46,6 +46,7 @@ class ChatRequest(BaseModel):
     message: str = Field(min_length=1, max_length=2000)
     history: list[ChatTurn] = Field(default_factory=list, max_length=20)
     source: str = Field(default="both", pattern="^(both|darglobal|wasalt)$")
+    persona: str = Field(default="maria", pattern="^(maria|ben)$")
 
 
 @app.get("/api/health")
@@ -77,7 +78,7 @@ def chat(req: ChatRequest):
     try:
         result = bot().answer(req.message,
                               [t.model_dump() for t in req.history],
-                              source=req.source)
+                              source=req.source, persona=req.persona)
     except FileNotFoundError:
         raise HTTPException(503, "Knowledge index not built yet. "
                                  "Run: python -m scraper.run && python -m rag.index")

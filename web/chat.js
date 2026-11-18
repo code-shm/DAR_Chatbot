@@ -7,7 +7,93 @@ const modeNote = document.getElementById("modeNote");
 const seg = document.getElementById("sourceSeg");
 const railDot = document.getElementById("railDot");
 
-const BOT_NAME = "Maria";
+const personaSel = document.getElementById("persona");
+const voiceBtn = document.getElementById("voiceBtn");
+
+const PERSONAS = {
+  maria: { name: "Maria", gender: "female" },
+  ben:   { name: "Ben",   gender: "male" },
+};
+let persona = "maria";
+const botName = () => PERSONAS[persona].name;
+
+/* ---------------- speech (Web Speech API) ----------------
+   Browser-native: no key, no server round-trip, works offline. Which voices
+   exist depends on the OS, so we match by name and fall back by index rather
+   than assuming any particular voice is installed. */
+const speech = {
+  supported: typeof speechSynthesis !== "undefined",
+  auto: false,
+  voices: [],
+  current: null,          // the <button> that triggered playback
+
+  FEMALE: /zira|hazel|samantha|victoria|karen|moira|tessa|fiona|susan|catherine|serena|allison|ava|joanna|amy|emma|salli|female|\bwoman\b/i,
+  MALE: /david|mark|guy|daniel|alex|fred|thomas|oliver|george|james|brian|matthew|justin|ryan|male|\bman\b/i,
+
+  load() {
+    if (!this.supported) return;
+    this.voices = speechSynthesis.getVoices().filter(v => /^en/i.test(v.lang));
+  },
+
+  pick(gender) {
+    if (!this.voices.length) this.load();
+    const want = gender === "male" ? this.MALE : this.FEMALE;
+    const avoid = gender === "male" ? this.FEMALE : this.MALE;
+    return this.voices.find(v => want.test(v.name))
+        // a voice that isn't explicitly the other gender is better than none
+        || this.voices.find(v => !avoid.test(v.name))
+        || this.voices[gender === "male" ? this.voices.length - 1 : 0]
+        || null;
+  },
+
+  /* Strip everything that shouldn't be read aloud: citation markers, markdown,
+     URLs and table pipes would otherwise be spoken character by character. */
+  plain(text) {
+    return text
+      .replace(/\[\d+\]/g, "")
+      .replace(/https?:\/\/\S+/g, "")
+      .replace(/\|/g, " ")
+      .replace(/[*_#`>]/g, "")
+      .replace(/^\s*[-•]\s*/gm, "")
+      .replace(/\s{2,}/g, " ")
+      .trim();
+  },
+
+  stop() {
+    if (!this.supported) return;
+    speechSynthesis.cancel();
+    if (this.current) this.current.classList.remove("on");
+    this.current = null;
+    voiceBtn.classList.remove("speaking");
+  },
+
+  say(text, btn = null) {
+    if (!this.supported) return;
+    this.stop();
+    const body = this.plain(text);
+    if (!body) return;
+    const u = new SpeechSynthesisUtterance(body.slice(0, 4000));
+    const v = this.pick(PERSONAS[persona].gender);
+    if (v) { u.voice = v; u.lang = v.lang; } else { u.lang = "en-US"; }
+    u.rate = 1.0; u.pitch = persona === "ben" ? 0.92 : 1.05;
+    u.onend = u.onerror = () => {
+      if (btn) btn.classList.remove("on");
+      voiceBtn.classList.remove("speaking");
+      this.current = null;
+    };
+    this.current = btn;
+    if (btn) btn.classList.add("on");
+    voiceBtn.classList.add("speaking");
+    speechSynthesis.speak(u);
+  },
+};
+if (speech.supported) {
+  speech.load();
+  speechSynthesis.onvoiceschanged = () => speech.load();  // async on most browsers
+} else {
+  voiceBtn.disabled = true;
+  voiceBtn.title = "This browser has no speech synthesis";
+}
 
 /* ---- theme: explicit choice wins, otherwise follow the system ----
    localStorage can throw (private mode, blocked site data), and the page
@@ -84,10 +170,21 @@ function addMsg(role, bodyHtml, { error = false } = {}) {
   wrap.innerHTML =
     `<div class="meta">
        <span class="avatar sm">${isBot ? BOT_ICON : YOU_ICON}</span>
-       <span class="who">${isBot ? BOT_NAME : "You"}</span>
+       <span class="who">${isBot ? botName() : "You"}</span>
+       ${isBot && speech.supported
+         ? `<button class="speak" title="Read this aloud" aria-label="Read aloud">
+              <svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9zm13.5 3a4.5 4.5 0 0 0-2.5-4v8a4.5 4.5 0 0 0 2.5-4"/></svg>
+            </button>` : ""}
        <span class="time">${now()}</span>
      </div>
      <div class="bubble${error ? " err" : ""}">${bodyHtml}</div>`;
+
+  const sp = wrap.querySelector(".speak");
+  if (sp) sp.addEventListener("click", () => {
+    if (sp.classList.contains("on")) speech.stop();
+    else speech.say(wrap.querySelector(".bubble").innerText, sp);
+  });
+
   chat.appendChild(wrap);
   chat.scrollTop = chat.scrollHeight;
   return wrap;
@@ -120,7 +217,8 @@ async function ask(q) {
     const r = await fetch("/api/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message: q, history: history.slice(-10), source }),
+      body: JSON.stringify({ message: q, history: history.slice(-10),
+                             source, persona }),
     });
     if (!r.ok) {
       const e = await r.json().catch(() => ({}));
@@ -129,6 +227,7 @@ async function ask(q) {
     const data = await r.json();
     bubble.innerHTML = md(data.answer);
     addSources(pending, data.sources);
+    if (speech.auto) speech.say(bubble.innerText, pending.querySelector(".speak"));
     history.push({ role: "user", content: q },
                  { role: "assistant", content: data.answer });
   } catch (e) {
@@ -156,12 +255,38 @@ seg.addEventListener("click", (e) => {
 });
 
 function newConversation() {
+  speech.stop();
   history = [];
   chat.innerHTML = "";
   greet();
   suggestBox.style.display = "flex";
   input.focus();
 }
+
+personaSel.addEventListener("change", () => {
+  speech.stop();
+  persona = personaSel.value;
+  store.set("persona", persona);
+  // switching who you're talking to starts a fresh conversation: the history
+  // is written in the previous character's voice.
+  history = [];
+  chat.innerHTML = "";
+  greet();
+  suggestBox.style.display = "flex";
+});
+
+voiceBtn.addEventListener("click", () => {
+  speech.auto = !speech.auto;
+  voiceBtn.setAttribute("aria-pressed", String(speech.auto));
+  store.set("voice", speech.auto ? "on" : "off");
+  if (!speech.auto) speech.stop();
+  else {
+    // speak the latest answer so the toggle has an audible effect
+    const last = [...chat.querySelectorAll(".msg.bot")].pop();
+    if (last) speech.say(last.querySelector(".bubble").innerText,
+                         last.querySelector(".speak"));
+  }
+});
 
 document.querySelector(".rail nav").addEventListener("click", (e) => {
   const b = e.target.closest(".rail-item");
@@ -172,7 +297,7 @@ document.querySelector(".rail nav").addEventListener("click", (e) => {
 
 function greet() {
   addMsg("bot",
-    `<p>Hello, I'm <b>${BOT_NAME}</b>. I can tell you about ` +
+    `<p>Hello, I'm <b>${botName()}</b>. I can tell you about ` +
     "<b>DarGlobal</b> luxury developments and <b>Wasalt</b> property listings " +
     "across Saudi Arabia.</p>" +
     "<p>Everything I say comes from public sources, and I link each one so you " +
@@ -180,6 +305,16 @@ function greet() {
 }
 
 async function init() {
+  // restore remembered choices before the first message is rendered
+  const savedPersona = store.get("persona");
+  if (savedPersona && PERSONAS[savedPersona]) {
+    persona = savedPersona;
+    personaSel.value = savedPersona;
+  }
+  if (speech.supported && store.get("voice") === "on") {
+    speech.auto = true;
+    voiceBtn.setAttribute("aria-pressed", "true");
+  }
   greet();
   try {
     const [s, h] = await Promise.all([
