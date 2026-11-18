@@ -10,28 +10,38 @@ ENV HOME=/home/user \
     PATH=/home/user/.local/bin:$PATH \
     PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
-    # keep model caches inside the writable home dir
+    # model caches live under the writable home dir
     HF_HOME=/home/user/.cache/huggingface \
     FASTEMBED_CACHE_PATH=/home/user/.cache/fastembed
 
-WORKDIR $HOME/app
+WORKDIR /home/user/app
 
-# Install only the serving dependencies (playwright is dev/scrape-only).
-COPY --chown=user requirements.txt .
+# Dependencies as root (system site-packages). Playwright and pytest are
+# dev/scrape-only and are stripped from the runtime install.
+COPY requirements.txt .
 RUN grep -viE '^(playwright|pytest)' requirements.txt > /tmp/req-runtime.txt \
- && pip install --no-cache-dir -r /tmp/req-runtime.txt \
- # bake the embedding model into the image so cold starts don't download it
- && python -c "from fastembed import TextEmbedding; \
+ && pip install --no-cache-dir -r /tmp/req-runtime.txt
+
+COPY . .
+
+# Hand the home directory (app files + cache locations) to uid 1000 BEFORE
+# dropping privileges, so every step below writes as its owner. Everything
+# after this point runs as `user`, which is also how the container runs —
+# so no build step can create a file the runtime user cannot read.
+RUN mkdir -p /home/user/.cache && chown -R user:user /home/user
+USER user
+
+# Bake the embedding model in (as `user`, so the cache is correctly owned)
+# to keep cold starts fast and offline.
+RUN python -c "from fastembed import TextEmbedding; \
 TextEmbedding('sentence-transformers/all-MiniLM-L6-v2')"
 
-COPY --chown=user . .
+# Safety net: if no corpus was committed, collect Wasalt (sitemaps only —
+# no browser needed) so the app never starts with an empty knowledge base.
+RUN test -f data/corpus.jsonl || python -m scraper.run --skip-darglobal
 
-# Build the vector index from the committed corpus shards. If no corpus was
-# committed, collect Wasalt (sitemaps only — no browser needed) so the app
-# never starts with an empty knowledge base.
-USER user
-RUN test -f data/corpus.jsonl || python -m scraper.run --skip-darglobal \
- && python -m rag.index
+# Build the vector + BM25 index from the corpus.
+RUN python -m rag.index
 
 EXPOSE 7860
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \

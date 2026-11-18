@@ -143,10 +143,18 @@ browser: inline `[n]` markers match the citation chips beneath each answer.
 
 - **Docker image not built locally.** Docker Desktop's Linux engine on this
   machine returns HTTP 500 at every API version (its `docker-desktop` WSL
-  distro was stopped; starting it revived the engine only briefly). This is a
-  broken local Docker install, not a Dockerfile problem, and it does not
-  affect Render, which builds server-side. Verify locally after restarting
-  Docker Desktop with `docker compose up --build`.
+  distro was stopped; starting it revived the engine only briefly), so every
+  image change has had to be validated by reading rather than building.
+  Restart Docker Desktop and run `docker compose up --build` to confirm.
+
+  Render's first build caught a real consequence of this: the embedding
+  model was baked in by a `RUN` executing as **root**, which left
+  `/home/user/.cache/fastembed` root-owned, and the later index build —
+  running as uid 1000 — died with `PermissionError`. The Dockerfile now
+  chowns `/home/user` and switches to `USER user` *before* any step that
+  writes, so every build step runs as the same user that runs the
+  container. A `.dockerignore` was added at the same time, which also stops
+  a local `docker compose` build from baking `.env` into an image layer.
 - **Free models are a shared pool.** Three of the 14 were rate-limited
   during the probe, and which ones are throttled changes through the day.
   The client falls back across seven verified models, but under load a

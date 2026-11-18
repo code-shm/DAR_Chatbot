@@ -1,0 +1,17 @@
+# Secrets must never enter an image layer — they come from the host's
+# environment at runtime (Render env vars / docker compose env_file).
+.env
+
+# Not needed to serve, and keeps the build context small.
+.git
+.gitignore
+__pycache__/
+*.pyc
+.pytest_cache/
+tests/
+scripts/
+PUSH_COMMANDS.md
+
+# The index is rebuilt inside the image from data/corpus*.jsonl, so a local
+# copy would only be stale weight.
+data/index/
