@@ -89,7 +89,6 @@ POST /api/admin/refresh    token-protected corpus rebuild
 | Documents indexed | **2,091** — 1,961 Wasalt + 130 DarGlobal → 2,508 chunks |
 | Wasalt sitemap coverage | **8,630 / 8,634** category URLs (99.95%), 160 cities |
 | Wasalt listings collected | 45,489 for sale · 14,509 for rent |
-| Tests | **58** passing — parsers, chunking, retrieval, pipeline, API, LLM client |
 | Runtime footprint | ~350–450 MB RSS, fits a 512 MB free instance |
 | Image weight saved | ~1.5 GB, by choosing ONNX `fastembed` over torch |
 
@@ -188,19 +187,18 @@ curl -X POST https://<host>/api/admin/refresh \
 
 ---
 
-## Tests
+## Verification
 
 ```bash
-python -m pytest tests/        # 58 tests
 python scripts/qa.py           # 10 realistic questions through the full pipeline
 python scripts/probe_models.py # which OpenRouter free models are answering today
 ```
 
-The suite covers both scraper parsers, chunking, hybrid retrieval and its
-per-URL capping, the pipeline's persona handling and off-topic refusal, every
-API route and its validation, and the LLM client's fallback behaviour.
+`qa.py` runs a fixed set of realistic questions — per-source and cross-source,
+including one with no price data available and one deliberately off-topic — and
+prints each answer with its cited sources for review.
 
-Beyond unit tests, the running server was checked end to end: health, chat,
+The running server was checked end to end: health, chat,
 source filtering (a Wasalt-only query returns Wasalt URLs exclusively),
 conversational follow-up resolution, off-topic refusal, static asset serving and
 admin-token auth. The interface was driven in a headless browser to confirm that
@@ -217,7 +215,6 @@ scraper/   darglobal.py · wasalt.py · run.py
 rag/       chunking.py · index.py · llm.py · pipeline.py
 server/    main.py — FastAPI app and routes
 web/       index.html · style.css · chat.js
-tests/     58 tests across parsers, retrieval, pipeline, API, LLM
 scripts/   qa.py · probe_models.py
 data/      corpus.jsonl · corpus_stats.json
 ```

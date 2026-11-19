@@ -9,7 +9,3 @@ rank-bm25>=0.2.2
 
 # --- scraping (corpus build / refresh) ---
 playwright>=1.49
-
-# --- dev/test ---
-pytest>=8
-httpx>=0.27
