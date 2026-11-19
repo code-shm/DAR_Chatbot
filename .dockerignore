@@ -10,7 +10,6 @@ __pycache__/
 .pytest_cache/
 tests/
 scripts/
-PUSH_COMMANDS.md
 
 # The index is rebuilt inside the image from data/corpus*.jsonl, so a local
 # copy would only be stale weight.
